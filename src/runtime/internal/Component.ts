@@ -1,7 +1,7 @@
 import { add_render_callback, flush, schedule_update, dirty_components } from './scheduler';
 import { current_component, set_current_component } from './lifecycle';
 import { blank_object, is_empty, is_function, run, run_all, noop } from './utils';
-import { children, detach } from './dom';
+import { children, detach, update_hydrating } from './dom';
 import { transition_in } from './transitions';
 
 interface Fragment {
@@ -100,6 +100,8 @@ export function init(component, options, instance, create_fragment, not_equal, p
 	const parent_component = current_component;
 	set_current_component(component);
 
+	const prop_values = options.props || {};
+
 	const $$: T$$ = component.$$ = {
 		fragment: null,
 		ctx: null,
@@ -126,7 +128,7 @@ export function init(component, options, instance, create_fragment, not_equal, p
 	let ready = false;
 
 	$$.ctx = instance
-		? instance(component, options.props || {}, (i, ret, ...rest) => {
+		? instance(component, prop_values, (i, ret, ...rest) => {
 			const value = rest.length ? rest[0] : ret;
 			if ($$.ctx && not_equal($$.ctx[i], $$.ctx[i] = value)) {
 				if (!$$.skip_bound && $$.bound[i]) $$.bound[i](value);
@@ -145,17 +147,21 @@ export function init(component, options, instance, create_fragment, not_equal, p
 
 	if (options.target) {
 		if (options.hydrate) {
+			update_hydrating(true);
+
 			const nodes = children(options.target);
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			$$.fragment && $$.fragment!.l(nodes);
-			nodes.forEach(detach);
+			nodes.children.forEach(detach);
 		} else {
 			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			$$.fragment && $$.fragment!.c();
 		}
 
 		if (options.intro) transition_in(component.$$.fragment);
+
 		mount_component(component, options.target, options.anchor);
+		update_hydrating(false);
 		flush();
 	}
 

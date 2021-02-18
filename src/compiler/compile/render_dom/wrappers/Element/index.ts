@@ -7,7 +7,7 @@ import FragmentWrapper from '../Fragment';
 import { escape_html, string_literal } from '../../../utils/stringify';
 import TextWrapper from '../Text';
 import fix_attribute_casing from './fix_attribute_casing';
-import { b, x, p } from 'code-red';
+import { b, x } from 'code-red';
 import { namespaces } from '../../../../utils/namespaces';
 import AttributeWrapper from './Attribute';
 import StyleAttributeWrapper from './StyleAttribute';
@@ -354,7 +354,7 @@ export default class ElementWrapper extends Wrapper {
 
 		if (nodes && this.renderer.options.hydratable && !this.void) {
 			block.chunks.claim.push(
-				b`${this.node.children.length > 0 ? nodes : children}.forEach(@detach);`
+				b`${this.node.children.length > 0 ? nodes : children}.children.forEach(@detach);`
 			);
 		}
 
@@ -390,17 +390,13 @@ export default class ElementWrapper extends Wrapper {
 	}
 
 	get_claim_statement(nodes: Identifier) {
-		const attributes = this.node.attributes
-			.filter((attr) => attr.type === 'Attribute')
-			.map((attr) => p`${attr.name}: true`);
-
 		const name = this.node.namespace
 			? this.node.name
 			: this.node.name.toUpperCase();
 
 		const svg = this.node.namespace === namespaces.svg ? 1 : null;
 
-		return x`@claim_element(${nodes}, "${name}", { ${attributes} }, ${svg})`;
+		return x`@claim_element(${nodes}, "${name}", null, ${svg})`;
 	}
 
 	add_directives_in_order (block: Block) {

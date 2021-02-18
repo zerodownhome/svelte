@@ -1,11 +1,21 @@
 import { has_prop } from './utils';
 
+let is_hydrating = false;
+
+export function update_hydrating(val: boolean) {
+	is_hydrating = val;
+}
+
 export function append(target: Node, node: Node) {
-	target.appendChild(node);
+	if (!is_hydrating || node.parentNode !== target) {
+		target.appendChild(node);
+	}
 }
 
 export function insert(target: Node, node: Node, anchor?: Node) {
-	target.insertBefore(node, anchor || null);
+	if (!is_hydrating || node.parentNode !== target) {
+		target.insertBefore(node, anchor || null);
+	}
 }
 
 export function detach(node: Node) {
@@ -149,42 +159,48 @@ export function time_ranges_to_array(ranges) {
 	return array;
 }
 
-export function children(element) {
-	return Array.from(element.childNodes);
+export function children(element: HTMLElement) {
+	const children =  Array.from(element.childNodes);
+	return {
+		children,
+		element,
+		next: children[0] || null,
+		last: children.length ? children[children.length - 1].nextSibling : null,
+	};
 }
 
-export function claim_element(nodes, name, attributes, svg) {
-	for (let i = 0; i < nodes.length; i += 1) {
-		const node = nodes[i];
-		if (node.nodeName === name) {
-			let j = 0;
-			const remove = [];
-			while (j < node.attributes.length) {
-				const attribute = node.attributes[j++];
-				if (!attributes[attribute.name]) {
-					remove.push(attribute.name);
-				}
+export function claim_element(nodes, name, fallback, svg) {
+	for (let i = 0; i < nodes.children.length; i += 1) {
+		const node = nodes.children[i];
+		if (node.nodeType !== 3) {
+			if (node.nodeName === name) {
+				nodes.children.splice(0,i + 1);
+				nodes.next = nodes.children[0];
+				return node;
+			} else {
+				nodes.next = nodes.last;
+				nodes.children.forEach(detach);
+				nodes.children.length = 0;
+				break;
 			}
-			for (let k = 0; k < remove.length; k++) {
-				node.removeAttribute(remove[k]);
-			}
-			return nodes.splice(i, 1)[0];
 		}
 	}
-
-	return svg ? svg_element(name) : element(name);
+	const node = fallback || (svg ? svg_element(name) : element(name));
+	insert(nodes.element, node, nodes.next);
+	return node;
 }
 
 export function claim_text(nodes, data) {
-	for (let i = 0; i < nodes.length; i += 1) {
-		const node = nodes[i];
-		if (node.nodeType === 3) {
-			node.data = '' + data;
-			return nodes.splice(i, 1)[0];
-		}
+	if (nodes.children.length && nodes.children[0].nodeType === 3) {
+		const node = nodes.children.shift();
+		node.data = '' + data;
+		nodes.next = nodes.children[0];
+		return node;
+	} else {
+		const node = text(data);
+		insert(nodes.element, node, nodes.next);
+		return node;
 	}
-
-	return text(data);
 }
 
 export function claim_space(nodes) {
@@ -314,7 +330,13 @@ export function custom_event<T=any>(type: string, detail?: T) {
 }
 
 export function query_selector_all(selector: string, parent: HTMLElement = document.body) {
-	return Array.from(parent.querySelectorAll(selector));
+	const children = Array.from(parent.querySelectorAll(selector));
+	return {
+		children,
+		element: parent,
+		next: children[0] || null,
+		last: children.length ? children[children.length - 1].nextSibling : null
+	};
 }
 
 export class HtmlTag {
@@ -328,14 +350,14 @@ export class HtmlTag {
 		this.e = this.n = null;
 	}
 
-	m(html: string, target: HTMLElement, anchor: HTMLElement = null) {
+	m(html: string, target: HTMLElement) {
 		if (!this.e) {
 			this.e = element(target.nodeName as keyof HTMLElementTagNameMap);
 			this.t = target;
 			this.h(html);
 		}
 
-		this.i(anchor);
+		// this.i(anchor);
 	}
 
 	h(html) {
