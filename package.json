@@ -1,5 +1,5 @@
 {
-  "name": "svelte",
+  "name": "@zerodown/svelte",
   "version": "3.32.3",
   "description": "Cybernetically enhanced web apps",
   "module": "index.mjs",
@@ -73,13 +73,12 @@
     "dev": "rollup -cw",
     "pretest": "npm run build",
     "posttest": "agadoo internal/index.mjs",
-    "prepublishOnly": "npm run lint && PUBLISH=true npm test",
     "tsd": "tsc -p src/compiler --emitDeclarationOnly && tsc -p src/runtime --emitDeclarationOnly",
     "lint": "eslint \"{src,test}/**/*.{ts,js}\""
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/sveltejs/svelte.git"
+    "url": "git+https://github.com/zerodown/svelte.git"
   },
   "keywords": [
     "UI",
@@ -89,10 +88,7 @@
   ],
   "author": "Rich Harris",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/sveltejs/svelte/issues"
-  },
-  "homepage": "https://github.com/sveltejs/svelte#README",
+  "homepage": "https://github.com/zerodown/svelte#README",
   "devDependencies": {
     "@ampproject/remapping": "^0.3.0",
     "@rollup/plugin-commonjs": "^11.0.0",
@@ -140,5 +136,8 @@
     ],
     "sourceMap": true,
     "instrument": true
+  },
+  "directories": {
+    "test": "test"
   }
 }
